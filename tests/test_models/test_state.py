@@ -1,17 +1,18 @@
 #!/usr/bin/python3
-"""tests for the state module """
+""" Contain tests for the state module."""
 from tests.test_models.test_base_model import test_basemodel
-from models.state import State
 import unittest
 from models.base_model import BaseModel
+from models.state import State
 from os import getenv, remove
 import pep8
 
+
 storage = getenv("HBNB_TYPE_STORAGE", "fs")
+
 
 class TestState(unittest.TestCase):
     """Test the State class. """
-
     @classmethod
     def setUpClass(cls):
         '''
@@ -32,17 +33,17 @@ class TestState(unittest.TestCase):
             pass
 
     def __init__(self, *args, **kwargs):
-        """ """
+        """test instantiation """
         super().__init__(*args, **kwargs)
         self.name = "State"
         self.value = State
 
     def test_name3(self):
-        """ """
+        """test name is str """
         new = self.value()
         self.assertEqual(type(new.name), str)
 
-     def test_States_dbtable(self):
+    def test_States_dbtable(self):
         '''
             Check if the tablename is correct
         '''
@@ -67,4 +68,3 @@ class TestState(unittest.TestCase):
         '''
         name = getattr(self.new_state, "name")
         self.assertIsInstance(name, str)
-
