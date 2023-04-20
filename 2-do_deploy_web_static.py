@@ -7,7 +7,7 @@ import os
 from fabric.api import *
 
 # specify the hosts and run the command across the systems
-env.username = 'ubuntu'
+env.username = 'vagrant'
 env.hosts = ['ubuntu@100.25.33.197', 'ubuntu@54.90.12.51']
 env.key_file = '~/.ssh/id_rsa'
 
