@@ -1,54 +1,64 @@
 #!/usr/bin/python3
-"""a Fabric script (based on the file 1-pack_web_static.py)
-that distributes an archive to web servers,
-using the function do_deploy:
-"""
-import os
-from fabric.api import *
+"""Generates a .tgz archive from the
+contents of the web_static folder
+Distributes an archive to a web server"""
 
-# specify the hosts and run the command across the systems
-env.username = 'vagrant'
-env.hosts = ['ubuntu@100.25.33.197', 'ubuntu@54.90.12.51']
-env.key_file = '~/.ssh/id_rsa'
+from fabric.operations import local, run, put
+from datetime import datetime
+import os
+from fabric.api import env
+import re
+
+
+env.hosts = ['100.25.33.197', '54.90.12.51']
+
+
+def do_pack():
+    """Function to compress files in an archive"""
+    local("mkdir -p versions")
+    result = local("tar -cvzf versions/web_static_{}.tgz web_static"
+                   .format(datetime.strftime(datetime.now(), "%Y%m%d%H%M%S")),
+                   capture=True)
+    if result.failed:
+        return None
+    return result
 
 
 def do_deploy(archive_path):
-    """Deploys the static files to the host servers.
-    Args:
-        archive_path (str): The path to the archived static files.
-    """
+    """Function to distribute an archive to a server"""
     if not os.path.exists(archive_path):
         return False
-    arch_file = os.path.basename(archive_path)
-    file_name = arch_file.replace(".tgz", "")
-    folder = "/data/web_static/releases/{}/".format(file_name)
-    status = False
-
-    try:
-        # upload the archive to the /tmp/ directory of web server
-        put(archive_path, "/tmp/{}".format(file_name))
-
-        # create directory to extract archive into
-        run("mkdir -p {}".format(folder))
-
-        # uncompress the archive
-        run("tar -xzf /tmp/{} -C {}".format(file_name, folder))
-
-        # delete the archive from the web server
-        run("rm -rf /tmp/{}".format(file_name))
-
-        # copy all static files to created directory
-        run("mv {}web_static/* {}".format(folder, folder))
-
-        run("rm -rf {}web_static".format(folder))
-
-        # delete the symbolic link
-        run("rm -rf /data/web_static/current")
-
-        # create sybmolic link to static files directory
-        run("ln -s {} /data/web_static/current".format(folder))
-        print("New version deployed")
-        status = True
-    except Exception:
-        status = False
-    return status
+    rex = r'^versions/(\S+).tgz'
+    match = re.search(rex, archive_path)
+    filename = match.group(1)
+    res = put(archive_path, "/tmp/{}.tgz".format(filename))
+    if res.failed:
+        return False
+    res = run("mkdir -p /data/web_static/releases/{}/".format(filename))
+    if res.failed:
+        return False
+    res = run("tar -xzf /tmp/{}.tgz -C /data/web_static/releases/{}/"
+              .format(filename, filename))
+    if res.failed:
+        return False
+    res = run("rm /tmp/{}.tgz".format(filename))
+    if res.failed:
+        return False
+    res = run("mv /data/web_static/releases/{}"
+              "/web_static/* /data/web_static/releases/{}/"
+              .format(filename, filename))
+    if res.failed:
+        return False
+    res = run("rm -rf /data/web_static/releases/{}/web_static"
+              .format(filename))
+    if res.failed:
+        return False
+    res = run("rm -rf /data/web_static/current")
+    if res.failed:
+        return False
+    res = run("ln -s /data/web_static/releases/{}/ /data/web_static/current"
+              .format(filename))
+    if res.failed:
+        return False
+    print('New version deployed!')
+    return True
